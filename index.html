@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>minha estrela</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>★</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --amarelo: #FFD60A;
+    --amarelo-escuro: #F2C200;
+    --preto: #111;
+    --branco: #fff;
+    --cinza: #555;
+    --amarelo-claro: #FFF4A8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    padding-bottom: 48px;
+    background-color: var(--amarelo);
+    /* azulejo de estrelinhas pixeladas, bem discreto */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' shape-rendering='crispEdges'%3E%3Cpath fill='%23E8B800' d='M10 8h2v2h2v2h-2v2h-2v-2H8v-2h2zM34 32h2v2h2v2h-2v2h-2v-2h-2v-2h2z'/%3E%3C/svg%3E");
+    color: var(--preto);
+    font: 13px/1.5 Verdana, Tahoma, Geneva, sans-serif;
+    padding: 32px 16px 24px;
+    min-height: 100vh;
+  }
+  a { color: var(--preto); }
+
+  /* ---------- janela ---------- */
+  .janela {
+    width: min(560px, 100%); margin: 0 auto 24px;
+    background: var(--branco);
+    border: 2px solid var(--preto);
+    box-shadow: 4px 4px 0 var(--preto);
+  }
+  .barra {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--preto); color: var(--amarelo);
+    font-family: 'Silkscreen', monospace; font-size: 12px;
+    padding: 3px 4px 3px 8px;
+  }
+  .barra .botoes { display: flex; gap: 3px; }
+  .barra .botoes span {
+    width: 16px; height: 14px; display: grid; place-items: center;
+    background: var(--amarelo); color: var(--preto); font-size: 10px; line-height: 1;
+  }
+  .corpo { padding: 22px 22px 18px; }
+
+  /* ---------- botões e campos estilo antigo ---------- */
+  input, button { font: 13px Verdana, Tahoma, sans-serif; color: var(--preto); }
+  input {
+    width: 100%; padding: 5px 6px; background: var(--branco);
+    border: 2px solid; border-color: var(--cinza) var(--branco) var(--branco) var(--cinza);
+    outline: 1px solid var(--preto);
+  }
+  input:focus { background: #FFFBE0; }
+  button {
+    padding: 4px 18px; cursor: pointer; background: var(--amarelo);
+    border: 2px solid; border-color: var(--branco) var(--preto) var(--preto) var(--branco);
+    outline: 1px solid var(--preto);
+  }
+  button:active { border-color: var(--preto) var(--branco) var(--branco) var(--preto); }
+  button:disabled { color: var(--cinza); }
+
+  /* ---------- tela da senha ---------- */
+  #portao .corpo { text-align: center; }
+  #portao h1 { font: 400 15px 'Silkscreen', monospace; margin: 0 0 12px; }
+  #portao p { margin: 0 0 16px; }
+  #form-senha { display: flex; gap: 8px; max-width: 320px; margin: 0 auto; }
+  .erro { min-height: 20px; margin-top: 12px; color: #B00000; }
+
+  /* ---------- conteúdo ---------- */
+  #conteudo { display: none; }
+  #conteudo.aberto { display: block; }
+
+  .poema { text-align: center; font: 17px/1.65 'Times New Roman', Times, Georgia, serif; }
+  .poema h2 { font: italic 700 30px 'Times New Roman', Times, serif; margin: 6px 0 4px; }
+  .poema .para { font: 400 11px 'Silkscreen', monospace; margin: 0 0 26px; color: var(--cinza); }
+  .poema p { margin: 0 0 20px; }
+  .poema p.solo { font-style: italic; }
+  hr { border: 0; border-top: 1px dashed var(--preto); margin: 24px 0; }
+  .estrelinha { font-family: 'Silkscreen', monospace; letter-spacing: 6px; }
+
+  /* ---------- estrelas de caneta ---------- */
+  body { position: relative; }
+  .janela { position: relative; z-index: 1; }
+  #estrelas, #estrelas-grandes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  #estrelas { z-index: 2; }
+  #estrelas-grandes { z-index: 2; }
+  /* adesivos: estrela amarela preenchida, contorno de caneta preta */
+  #estrelas-grandes .estrela path { fill: var(--amarelo); stroke: var(--preto); }
+  #estrelas-grandes .estrela { filter: drop-shadow(2px 2px 0 rgba(0,0,0,.25)); }
+  .estrela { position: absolute; overflow: visible; }
+  .estrela path {
+    fill: none; stroke: var(--preto); stroke-linecap: round; stroke-linejoin: round;
+    visibility: hidden; animation: ferver .48s infinite;
+  }
+  .estrela path:nth-child(2) { animation-delay: -.32s; }
+  .estrela path:nth-child(3) { animation-delay: -.16s; }
+  @keyframes ferver { 0%, 33.3% { visibility: visible; } 33.4%, 100% { visibility: hidden; } }
+  @media (max-width: 600px) { #estrelas .estrela { transform: scale(.7) rotate(var(--giro)) !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    .estrela path { animation: none; }
+    .estrela path:first-child { visibility: visible; }
+  }
+
+  /* ---------- Clover e Creature ---------- */
+  #janela-poema .corpo { padding-bottom: 104px; }
+  .bichinho {
+    position: absolute; bottom: 12px; z-index: 4; display: none;
+    width: 96px; padding: 0; margin: 0; border: 0; outline: 0; background: none; box-shadow: none;
+    cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  #clover { left: 14px; }
+  #creature { right: 14px; }
+  .bichinho.vivo { display: block; }
+  @media (max-width: 600px) {
+    .bichinho { width: 74px; bottom: 10px; }
+    #clover { left: 10px; } #creature { right: 10px; }
+    #janela-poema .corpo { padding-bottom: 88px; }
+  }
+  .bichinho img { width: 100%; display: block; image-rendering: pixelated; transform-origin: 50% 100%; pointer-events: none; user-select: none; }
+  .bichinho.apertado img { animation: squash .38s ease-out; }
+  @keyframes squash {
+    0%   { transform: scale(1, 1); }
+    18%  { transform: scale(1.22, .74); }
+    42%  { transform: scale(.86, 1.2); }
+    65%  { transform: scale(1.06, .95); }
+    82%  { transform: scale(.98, 1.02); }
+    100% { transform: scale(1, 1); }
+  }
+  .bichinho.voltando img { animation: voltar .5s cubic-bezier(.3, 1.6, .5, 1); }
+  @keyframes voltar { from { transform: scale(0); } to { transform: scale(1); } }
+  #explosao { position: absolute; z-index: 5; display: none; pointer-events: none; image-rendering: pixelated; }
+
+  #memorial {
+    position: fixed; inset: 0; z-index: 50; background: #000; display: none;
+    align-items: center; justify-content: space-between; gap: 24px;
+    padding: 24px clamp(20px, 5vw, 80px); cursor: default;
+    font-family: Arial, Helvetica, sans-serif; color: #fff;
+  }
+  #memorial.aberto { display: flex; }
+  /* esconde a barra de rolagem e pinta tudo de preto enquanto o memorial está aberto */
+  html.luto { overflow: hidden; background: #000; }
+  #memorial .texto, #memorial img, #memorial .voltar { opacity: 0; transition: opacity 2.2s ease; }
+  #memorial.revelado .texto, #memorial.revelado img { opacity: 1; }
+  #memorial.revelado .voltar.pode { opacity: .35; }
+  #memorial h3 { margin: 0; font-size: clamp(22px, 4.6vw, 54px); font-weight: 700; letter-spacing: .5px; line-height: 1.05; }
+  #memorial p { margin: 8px 0 0; font-size: clamp(12px, 1.6vw, 19px); font-weight: 700; color: #bbb; }
+  #memorial img {
+    width: clamp(110px, 30vw, 360px); image-rendering: pixelated; flex-shrink: 0;
+    filter: grayscale(1) contrast(1.05) brightness(.85) drop-shadow(0 0 14px rgba(255,255,255,.22));
+    transition-delay: .4s;
+  }
+  #memorial .voltar { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 11px; color: #888; font-weight: 400; }
+  #memorial.saindo { opacity: 0; transition: opacity .6s; }
+
+  /* ---------- nuggets escondidos ---------- */
+  .nugget {
+    height: 17px; width: auto; vertical-align: -2px; margin-left: 5px;
+    cursor: pointer; transform: rotate(var(--giro, 0deg));
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .nugget.pego { animation: pegar .35s ease-in forwards; pointer-events: none; }
+  @keyframes pegar {
+    40%  { transform: scale(1.6) rotate(var(--giro, 0deg)); opacity: 1; }
+    100% { transform: scale(0) rotate(180deg); opacity: 0; }
+  }
+  #casados {
+    position: fixed; inset: 0; z-index: 40; display: none;
+    place-items: center; padding: 16px; cursor: pointer;
+  }
+  #casados.aberto { display: grid; }
+  #casados span {
+    font: italic 700 clamp(34px, 9vw, 84px)/1.05 'Times New Roman', Times, serif;
+    text-align: center; color: var(--preto);
+    text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 3px 3px 0 #fff, 0 3px 0 #fff, 0 -3px 0 #fff, 3px 0 0 #fff, -3px 0 0 #fff;
+    transform: scale(0) rotate(-6deg);
+  }
+  #casados.aberto span { animation: casar .7s cubic-bezier(.3, 1.6, .5, 1) forwards; }
+  @keyframes casar { to { transform: scale(1) rotate(-3deg); } }
+  #casados.saindo { opacity: 0; transition: opacity .6s; }
+  #confete { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 41; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- ================= TELA DA SENHA ================= -->
+<div id="portao" class="janela">
+  <div class="barra"><span>sirius.exe</span><span class="botoes"><span>_</span><span>□</span><span>×</span></span></div>
+  <div class="corpo">
+    <h1>★ minha estrela ★</h1>
+    <p>A senha tá na sua carta</p>
+    <form id="form-senha" autocomplete="off">
+      <input id="senha" type="text" aria-label="Senha" autocapitalize="off" spellcheck="false">
+      <button id="botao-abrir" type="submit">ok</button>
+    </form>
+    <div class="erro" id="erro" role="alert"></div>
+  </div>
+</div>
+
+<!-- ================= CONTEÚDO ================= -->
+<div id="conteudo">
+  <div class="janela" id="janela-poema">
+    <div class="barra"><span>nugget.txt</span><span class="botoes"><span>_</span><span>□</span><span>×</span></span></div>
+    <div class="corpo">
+      <div class="poema" id="poema"></div>
+      <hr>
+      <div style="text-align:center" class="estrelinha">★★★</div>
+      <button id="clover" class="bichinho" type="button" aria-label="Clover" data-nome="CLOVER" data-frase="He contracted a severe case of Death."><img src="assets/clover.png" alt="" draggable="false"></button>
+      <button id="creature" class="bichinho" type="button" aria-label="Creature" data-nome="CREATURE" data-frase="It contracted a severe case of Death."><img src="assets/creature.png" alt="" draggable="false"></button>
+    </div>
+  </div>
+
+</div>
+
+<div id="estrelas-grandes" aria-hidden="true"></div>
+<div id="estrelas" aria-hidden="true"></div>
+
+<div id="casados"><span>Estamos casados agora</span></div>
+<canvas id="confete"></canvas>
+
+<img id="explosao" alt="">
+<div id="memorial" role="dialog" aria-label="In memory">
+  <div class="texto">
+    <h3></h3>
+    <p></p>
+  </div>
+  <img alt="">
+  <div class="voltar">(clique para voltar)</div>
+</div>
+
+<script src="segredo.js"></script>
+<script>
+/* ---------- estrelas rabiscadas (3 quadros que se alternam, como animação desenhada à mão) ---------- */
+function rabisco(tam, pontas) {
+  const c = 50, R = 40, r = pontas === 4 ? 13 : 17, n = pontas * 2;
+  const j = () => (Math.random() - .5) * 7;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / pontas;
+    const raio = i % 2 ? r : R;
+    pts.push([c + Math.cos(a) * raio + j(), c + Math.sin(a) * raio + j()]);
+  }
+  // passa um pouquinho do ponto inicial, como caneta que não fecha certinho
+  const [x0, y0] = pts[0], [x1, y1] = pts[1];
+  pts.push([x0 + (x1 - x0) * .3 + j(), y0 + (y1 - y0) * .3 + j()]);
+  return 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join(' L');
+}
+
+function espalharEstrelas() {
+  const alto = document.body.scrollHeight;
+  const estreito = innerWidth < 600;
+  // pretas e pequenas: por cima, na beirada das janelas
+  desenharEstrelas('estrelas', Math.max(8, Math.round(alto / 170)), 26, 26, 3, i => {
+    const lado = i % 2 === 0;
+    return estreito
+      ? (lado ? 1 + Math.random() * 3 : 96 + Math.random() * 3)
+      : (lado ? 1 + Math.random() * 9 : 88 + Math.random() * 8);
+  });
+  // amarelas: adesivos colados na borda das janelas
+  posicionarClover();
+  colarAdesivos(estreito);
+}
+
+function colarAdesivos(estreito) {
+  const caixa = document.getElementById('estrelas-grandes');
+  caixa.innerHTML = '';
+  const base = document.body.getBoundingClientRect();
+  let lado = Math.random() < .5;
+  document.querySelectorAll('.janela').forEach(jan => {
+    if (jan.hidden || !jan.offsetParent) return;
+    const r = jan.getBoundingClientRect();
+    const qtd = Math.max(2, Math.round(r.height / 260));
+    for (let i = 0; i < qtd; i++) {
+      lado = !lado;
+      const tam = (estreito ? 34 : 46) + Math.random() * (estreito ? 14 : 22);
+      const pontas = Math.random() < .25 ? 4 : 5;
+      const giro = (Math.random() * 50 - 25).toFixed(0) + 'deg';
+      // centro um pouco pra fora da borda, pra cobrir pouco do texto
+      const fora = tam * (.15 + Math.random() * .15);
+      const cx = (lado ? r.left - base.left - fora : r.right - base.left + fora) + Math.random() * 6 - 3;
+      const cy = r.top - base.top + (i + .2 + Math.random() * .6) / qtd * r.height;
+      if (jan.id === 'janela-poema' && cy > r.bottom - base.top - 170) continue;
+      caixa.insertAdjacentHTML('beforeend',
+        `<svg class="estrela" viewBox="0 0 100 100" width="${tam}" height="${tam}" style="left:${(cx - tam / 2).toFixed(0)}px;top:${(cy - tam / 2).toFixed(0)}px;--giro:${giro};transform:rotate(${giro})">` +
+        [0, 1, 2].map(() => `<path d="${rabisco(tam, pontas)}" stroke-width="${(3 * 100 / tam).toFixed(1)}"/>`).join('') +
+        `</svg>`);
+    }
+  });
+}
+
+function desenharEstrelas(id, qtd, tamMin, tamVar, largMin, posX) {
+  const caixa = document.getElementById(id);
+  caixa.innerHTML = '';
+  const alto = document.body.scrollHeight;
+  for (let i = 0; i < qtd; i++) {
+    const tam = tamMin + Math.random() * tamVar;
+    const pontas = Math.random() < .25 ? 4 : 5;
+    const larg = largMin + Math.random() * 1.5;
+    const giro = (Math.random() * 40 - 20).toFixed(0) + 'deg';
+    const x = posX(i);
+    const y = (i + Math.random() * .8) / qtd * (alto - 60) + 10 - tam / 4;
+    caixa.insertAdjacentHTML('beforeend',
+      `<svg class="estrela" viewBox="0 0 100 100" width="${tam}" height="${tam}" style="left:calc(${x.toFixed(1)}% - ${tam / 2}px);top:${y.toFixed(0)}px;--giro:${giro};transform:rotate(${giro})">` +
+      [0, 1, 2].map(() => `<path d="${rabisco(tam, pontas)}" stroke-width="${(larg * 100 / tam).toFixed(1)}"/>`).join('') +
+      `</svg>`);
+  }
+}
+espalharEstrelas();
+let esperaResize;
+// redesenha quando a página muda de tamanho (janela, fontes carregando, etc.)
+let larguraAntes = 0, alturaAntes = 0;
+new ResizeObserver(() => {
+  const w = document.body.clientWidth, h = document.getElementById('conteudo').offsetHeight;
+  if (w === larguraAntes && h === alturaAntes) return;
+  larguraAntes = w; alturaAntes = h;
+  clearTimeout(esperaResize); esperaResize = setTimeout(espalharEstrelas, 150);
+}).observe(document.body);
+
+/* ---------- Clover e Creature ---------- */
+const bichinhos = document.querySelectorAll('.bichinho');
+const explosao = document.getElementById('explosao');
+const memorial = document.getElementById('memorial');
+const somSqueak = new Audio('assets/squeak.mp3');
+const somExplosao = new Audio('assets/explosao.mp3');
+somSqueak.preload = somExplosao.preload = 'auto';
+// baixa a explosão antes, pra ela aparecer na hora (um link novo a cada vez faz a animação recomeçar)
+let explosaoBlob = null;
+fetch('assets/explosao.png').then(r => r.blob()).then(b => explosaoBlob = b).catch(() => {});
+let morto = null; // quem explodiu por último
+
+function posicionarClover() {} // os bichinhos ficam dentro da janela do poema (só CSS)
+
+bichinhos.forEach(bicho => {
+  let cliques = [];
+  bicho.addEventListener('pointerdown', e => {
+    if (morto) return;
+    e.preventDefault();
+    const som = somSqueak.cloneNode();
+    som.volume = .8;
+    som.play().catch(() => {});
+    bicho.classList.remove('apertado', 'voltando'); void bicho.offsetWidth; bicho.classList.add('apertado');
+
+    const agora = performance.now();
+    cliques = cliques.filter(t => agora - t < 1500);
+    cliques.push(agora);
+    if (cliques.length >= 7) { cliques = []; explodir(bicho); }
+  });
+});
+
+function explodir(bicho) {
+  morto = bicho;
+  const r = bicho.getBoundingClientRect(), base = document.body.getBoundingClientRect();
+  const w = r.width * 2.2, h = w * 498 / 353;
+  explosao.style.width = w + 'px';
+  explosao.style.left = (r.left - base.left + r.width / 2 - w / 2) + 'px';
+  explosao.style.top = (r.top - base.top + r.height / 2 - h * .55) + 'px';
+  if (explosao.src.startsWith('blob:')) URL.revokeObjectURL(explosao.src);
+  explosao.src = explosaoBlob ? URL.createObjectURL(explosaoBlob) : 'assets/explosao.png?' + Date.now();
+  explosao.style.display = 'block';
+  bicho.classList.remove('vivo');
+  somExplosao.currentTime = 0;
+  somExplosao.play().catch(() => {});
+
+  memorial.querySelector('h3').textContent = 'IN MEMORY OF ' + bicho.dataset.nome;
+  memorial.querySelector('p').textContent = bicho.dataset.frase;
+  memorial.querySelector('img').src = bicho.querySelector('img').src;
+  memorial.setAttribute('aria-label', 'In memory of ' + bicho.getAttribute('aria-label'));
+
+  // corte seco pro preto
+  setTimeout(() => {
+    explosao.style.display = 'none';
+    memorial.classList.remove('saindo', 'revelado');
+    memorial.querySelector('.voltar').classList.remove('pode');
+    document.documentElement.classList.add('luto');
+    memorial.classList.add('aberto');
+    setTimeout(() => memorial.classList.add('revelado'), 700);
+    setTimeout(() => memorial.querySelector('.voltar').classList.add('pode'), 5000);
+  }, 1500);
+}
+
+memorial.addEventListener('click', () => {
+  if (!memorial.querySelector('.voltar').classList.contains('pode')) return;
+  memorial.classList.add('saindo');
+  setTimeout(() => {
+    memorial.classList.remove('aberto', 'revelado', 'saindo');
+    document.documentElement.classList.remove('luto');
+    if (morto) morto.classList.add('vivo', 'voltando');
+    morto = null;
+  }, 600);
+});
+
+/* ---------- senha + decifragem (AES-GCM, chave via PBKDF2) ---------- */
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '');
+const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function decifrar(senha) {
+  const S = window.SEGREDO;
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(norm(senha)), 'PBKDF2', false, ['deriveKey']);
+  const chave = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: deB64(S.salt), iterations: S.iter, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deB64(S.iv) }, chave, deB64(S.dados));
+  return JSON.parse(new TextDecoder().decode(claro));
+}
+
+document.getElementById('form-senha').addEventListener('submit', async e => {
+  e.preventDefault();
+  const campo = document.getElementById('senha');
+  const botao = document.getElementById('botao-abrir');
+  const erro = document.getElementById('erro');
+  if (!campo.value.trim()) return;
+  botao.disabled = true; erro.textContent = '';
+  try {
+    montar(await decifrar(campo.value));
+    document.getElementById('portao').remove();
+  } catch {
+    erro.textContent = 'senha incorreta.';
+    botao.disabled = false;
+  }
+});
+
+/* ---------- montar o site ---------- */
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- 3 nuggets escondidos no poema ---------- */
+function esconderNuggets() {
+  const estrofes = [...document.querySelectorAll('#poema p')];
+  // um nugget em cada terço do poema, no fim de uma linha qualquer
+  for (let t = 0; t < 3; t++) {
+    const ini = Math.floor(t * estrofes.length / 3), fim = Math.floor((t + 1) * estrofes.length / 3);
+    const p = estrofes[ini + Math.floor(Math.random() * (fim - ini))];
+    const quebras = [...p.querySelectorAll('br')];
+    const img = document.createElement('img');
+    img.src = 'assets/nugget.png'; img.alt = 'nugget'; img.className = 'nugget'; img.draggable = false;
+    img.style.setProperty('--giro', (Math.random() * 50 - 25).toFixed(0) + 'deg');
+    const alvo = quebras.length ? quebras[Math.floor(Math.random() * (quebras.length + 1))] : null;
+    if (alvo) p.insertBefore(img, alvo); else p.appendChild(img);
+  }
+}
+
+let nuggetsPegos = 0;
+document.addEventListener('click', e => {
+  if (!e.target.matches('.nugget') || e.target.classList.contains('pego')) return;
+  e.target.classList.add('pego');
+  e.target.addEventListener('animationend', () => e.target.remove(), { once: true });
+  if (++nuggetsPegos === 3) setTimeout(casar, 350);
+});
+
+/* ---------- "Estamos casados agora" + confete ---------- */
+const somConfete = new Audio('assets/confetti.mp3');
+const somTorcida = new Audio('assets/cheer.mp3');
+somConfete.preload = somTorcida.preload = 'auto';
+const casados = document.getElementById('casados');
+let fecharCasados;
+
+function casar() {
+  casados.classList.remove('saindo');
+  casados.classList.add('aberto');
+  somConfete.currentTime = 0; somConfete.play().catch(() => {});
+  setTimeout(() => { somTorcida.currentTime = 0; somTorcida.play().catch(() => {}); }, 150);
+  confete(innerWidth / 2, innerHeight / 2);
+  setTimeout(() => confete(innerWidth * .2, innerHeight * .75), 250);
+  setTimeout(() => confete(innerWidth * .8, innerHeight * .75), 400);
+  clearTimeout(fecharCasados);
+  fecharCasados = setTimeout(sairCasados, 6000);
+}
+function sairCasados() {
+  if (!casados.classList.contains('aberto')) return;
+  casados.classList.add('saindo');
+  setTimeout(() => casados.classList.remove('aberto', 'saindo'), 600);
+}
+casados.addEventListener('click', sairCasados);
+
+// confete procedural: papeizinhos que explodem, caem com gravidade e giram
+const tela = document.getElementById('confete');
+const ctx = tela.getContext('2d');
+const cores = ['#FFD60A', '#FFD60A', '#FFE566', '#111111', '#FFFFFF', '#F2A900'];
+let pedacos = [], rodando = false, ultimoQuadro = 0;
+
+function confete(x, y) {
+  const dpr = devicePixelRatio || 1;
+  tela.width = innerWidth * dpr; tela.height = innerHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const qtd = innerWidth < 600 ? 90 : 150;
+  for (let i = 0; i < qtd; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const vel = 4 + Math.random() * 11;
+    pedacos.push({
+      x, y,
+      vx: Math.cos(ang) * vel,
+      vy: Math.sin(ang) * vel - 6,
+      w: 6 + Math.random() * 7, h: 9 + Math.random() * 9,
+      rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .35,
+      giro: Math.random() * Math.PI, vg: .08 + Math.random() * .15,
+      cor: cores[Math.floor(Math.random() * cores.length)],
+      redondo: Math.random() < .2,
+    });
+  }
+  if (!rodando) { rodando = true; ultimoQuadro = performance.now(); requestAnimationFrame(animarConfete); }
+}
+
+function animarConfete(agora) {
+  // física por tempo (não por quadro), pra ficar igual em celular lento e tela de 120Hz
+  const passos = Math.min(Math.max(Math.round((agora - ultimoQuadro) / 16.67), 1), 8);
+  ultimoQuadro = agora;
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  for (const p of pedacos) {
+    for (let k = 0; k < passos; k++) {
+      p.vx *= .985; p.vy = p.vy * .985 + .32;
+      p.x += p.vx + Math.sin(p.giro) * .6; p.y += p.vy;
+      p.rot += p.vr; p.giro += p.vg;
+    }
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.scale(1, Math.cos(p.giro)); // papel virando no ar
+    ctx.fillStyle = p.cor;
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 1;
+    if (p.redondo) { ctx.beginPath(); ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    else { ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); if (p.cor === '#FFFFFF' || p.cor === '#FFE566') ctx.strokeRect(-p.w / 2, -p.h / 2, p.w, p.h); }
+    ctx.restore();
+  }
+  pedacos = pedacos.filter(p => p.y < innerHeight + 40);
+  if (pedacos.length) requestAnimationFrame(animarConfete);
+  else { rodando = false; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+}
+
+function montar(d) {
+  const linhas = d.poema.trim().split('\n');
+  const titulo = linhas.shift();
+  const estrofes = linhas.join('\n').trim().split(/\n\s*\n/);
+  document.getElementById('poema').innerHTML =
+    `<h2>${esc(titulo)}</h2><div class="para">para minha estrela</div>` +
+    estrofes.map(e => `<p${!e.includes('\n') && e.length < 40 ? ' class="solo"' : ''}>${e.split('\n').map(esc).join('<br>')}</p>`).join('');
+  esconderNuggets();
+
+  document.getElementById('conteudo').classList.add('aberto');
+  window.scrollTo(0, 0);
+  bichinhos.forEach(b => b.classList.add('vivo'));
+  espalharEstrelas();
+}
+</script>
+</body>
+</html>
