@@ -207,6 +207,42 @@
   #final .carta p { margin: 0 0 14px; }
   #final .carta p:last-child { font-style: italic; text-align: right; }
   @keyframes abrirCarta { from { opacity: 0; transform: translateY(-6px); } }
+
+  /* ---------- player da carta ---------- */
+  #toca {
+    margin-top: 10px; border: 2px solid var(--preto); background: var(--branco);
+    box-shadow: 3px 3px 0 var(--preto); animation: abrirCarta .5s ease;
+  }
+  #toca .barra { font-size: 11px; padding: 2px 4px 2px 7px; }
+  #toca .barra .botoes span { width: 13px; height: 11px; font-size: 8px; }
+  #toca .tela {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+  }
+  #toca .play {
+    flex: none; width: 38px; height: 38px; padding: 0; position: relative;
+    background: var(--amarelo); border: 2px solid var(--preto); border-radius: 0;
+    box-shadow: 2px 2px 0 var(--preto); cursor: pointer;
+  }
+  #toca .play:active { transform: translate(2px, 2px); box-shadow: none; }
+  #toca .play:disabled { background: var(--amarelo-claro); cursor: wait; }
+  #toca .play svg { position: absolute; inset: 0; margin: auto; width: 26px; height: 26px; overflow: visible; }
+  #toca .play path {
+    fill: var(--preto); stroke: var(--preto); stroke-width: 2.5; stroke-linejoin: round;
+    visibility: hidden; animation: ferver .48s infinite;
+  }
+  #toca .play path:nth-child(2) { animation-delay: -.32s; }
+  #toca .play path:nth-child(3) { animation-delay: -.16s; }
+  #toca .lcd {
+    flex: 1; min-width: 0; background: var(--preto); padding: 5px 7px 4px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  #toca canvas { display: block; width: 100%; height: 34px; cursor: pointer; touch-action: none; }
+  #toca .tempo {
+    display: flex; justify-content: space-between;
+    font: 400 10px 'Silkscreen', monospace; color: var(--amarelo); letter-spacing: .5px;
+  }
+  #toca .tempo .estado { color: #888; }
+  #toca.tocando .tempo .estado { color: var(--amarelo); }
 </style>
 </head>
 <body>
@@ -233,7 +269,18 @@
       <div class="poema" id="poema"></div>
       <hr>
       <div style="text-align:center" class="estrelinha">★★★</div>
-      <details id="final" hidden><summary>uma última coisa</summary><div class="carta"></div></details>
+      <details id="final" hidden><summary>uma última coisa</summary>
+        <div id="toca" hidden>
+          <div class="barra"><span>carta.mp3</span><span class="botoes"><span>_</span><span>□</span><span>×</span></span></div>
+          <div class="tela">
+            <button class="play" type="button" aria-label="tocar" disabled><svg viewBox="0 0 26 26"></svg></button>
+            <div class="lcd">
+              <canvas aria-hidden="true"></canvas>
+              <div class="tempo"><span class="estado">carregando...</span><span class="relogio">0:00 / 0:00</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="carta"></div></details>
       <button id="clover" class="bichinho" type="button" aria-label="Clover" data-nome="CLOVER" data-frase="He contracted a severe case of Death."><img src="assets/clover.png" alt="" draggable="false"></button>
       <button id="creature" class="bichinho" type="button" aria-label="Creature" data-nome="CREATURE" data-frase="It contracted a severe case of Death."><img src="assets/creature.png" alt="" draggable="false"></button>
     </div>
@@ -559,6 +606,119 @@ function animarConfete(agora) {
   else { rodando = false; ctx.clearRect(0, 0, innerWidth, innerHeight); }
 }
 
+/* ---------- player da carta (áudio cifrado em voz.js) ---------- */
+function prepararVoz(info) {
+  const toca = document.getElementById('toca');
+  const botao = toca.querySelector('.play');
+  const svg = botao.querySelector('svg');
+  const tela = toca.querySelector('canvas');
+  const estado = toca.querySelector('.estado');
+  const relogio = toca.querySelector('.relogio');
+  const audio = new Audio();
+  let picos = null, arrastando = false;
+  toca.hidden = false;
+
+  // ícone rabiscado de caneta, igual às estrelas (3 quadros tremendo)
+  const j = () => (Math.random() - .5) * 2.2;
+  const forma = pts => 'M' + pts.map(([x, y]) => (x + j()).toFixed(1) + ' ' + (y + j()).toFixed(1)).join(' L') + ' Z';
+  function icone(pausado) {
+    const tri = [[8, 5], [21, 13], [8, 21]];
+    const barras = [[[7, 5], [11, 5], [11, 21], [7, 21]], [[15, 5], [19, 5], [19, 21], [15, 21]]];
+    svg.innerHTML = [0, 1, 2].map(() =>
+      `<path d="${pausado ? forma(tri) : barras.map(forma).join(' ')}"/>`).join('');
+    botao.setAttribute('aria-label', pausado ? 'tocar' : 'pausar');
+  }
+  icone(true);
+
+  const mmss = t => isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}` : '0:00';
+
+  function desenhar() {
+    const dpr = devicePixelRatio || 1;
+    const w = tela.clientWidth, h = tela.clientHeight;
+    if (!w) return;
+    if (tela.width !== Math.round(w * dpr)) { tela.width = Math.round(w * dpr); tela.height = Math.round(h * dpr); }
+    const c = tela.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, w, h);
+    const n = Math.max(20, Math.floor(w / 4));
+    const prog = audio.duration ? audio.currentTime / audio.duration : 0;
+    for (let i = 0; i < n; i++) {
+      const v = picos ? picos[Math.floor(i / n * picos.length)] : .15;
+      const bh = Math.max(2, v * (h - 2));
+      c.fillStyle = (i + .5) / n <= prog ? '#FFD60A' : '#4a4a3a';
+      c.fillRect(i * 4, (h - bh) / 2, 2, Math.round(bh));
+    }
+    // agulha
+    c.fillStyle = '#fff';
+    c.fillRect(Math.min(w - 1, prog * w), 0, 1, h);
+    relogio.textContent = `${mmss(audio.currentTime)} / ${mmss(audio.duration)}`;
+  }
+
+  function loop() {
+    desenhar();
+    if (!audio.paused) requestAnimationFrame(loop);
+  }
+
+  botao.addEventListener('click', () => {
+    if (audio.paused) audio.play(); else audio.pause();
+  });
+  audio.addEventListener('play', () => { icone(false); toca.classList.add('tocando'); estado.textContent = '► tocando'; loop(); });
+  audio.addEventListener('pause', () => { icone(true); toca.classList.remove('tocando'); estado.textContent = audio.ended ? 'fim' : 'pausado'; desenhar(); });
+  audio.addEventListener('loadedmetadata', desenhar);
+
+  // clicar/arrastar na onda pra pular
+  function pular(e) {
+    if (!audio.duration) return;
+    const r = tela.getBoundingClientRect();
+    audio.currentTime = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * audio.duration;
+    desenhar();
+  }
+  tela.addEventListener('pointerdown', e => { arrastando = true; tela.setPointerCapture(e.pointerId); pular(e); });
+  tela.addEventListener('pointermove', e => { if (arrastando) pular(e); });
+  tela.addEventListener('pointerup', () => { arrastando = false; });
+
+  // fechar a carta pausa o áudio
+  document.getElementById('final').addEventListener('toggle', e => {
+    if (!e.target.open) audio.pause(); else requestAnimationFrame(desenhar);
+  });
+  new ResizeObserver(desenhar).observe(tela);
+
+  // carrega voz.js só agora, decifra e monta o áudio
+  const s = document.createElement('script');
+  s.src = 'voz.js';
+  s.onload = async () => {
+    try {
+      const chave = await crypto.subtle.importKey('raw', deB64(info.chave), 'AES-GCM', false, ['decrypt']);
+      const mp3 = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deB64(info.iv) }, chave, deB64(window.VOZ));
+      delete window.VOZ;
+      audio.src = URL.createObjectURL(new Blob([mp3], { type: 'audio/mpeg' }));
+      botao.disabled = false;
+      estado.textContent = 'pronto';
+      // forma de onda de verdade
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        const ac = new AC();
+        const buf = await ac.decodeAudioData(mp3.slice(0));
+        ac.close();
+        const dados = buf.getChannelData(0), N = 300, bloco = Math.floor(dados.length / N);
+        const p = new Float32Array(N);
+        for (let i = 0; i < N; i++) {
+          let m = 0;
+          for (let k = i * bloco; k < (i + 1) * bloco; k += 16) m = Math.max(m, Math.abs(dados[k]));
+          p[i] = m;
+        }
+        const max = Math.max(...p) || 1;
+        picos = p.map(v => Math.pow(v / max, .7));
+      } catch {}
+      desenhar();
+    } catch {
+      estado.textContent = 'erro :(';
+    }
+  };
+  s.onerror = () => { estado.textContent = 'erro :('; };
+  document.body.appendChild(s);
+}
+
 function montar(d) {
   const linhas = d.poema.trim().split('\n');
   const titulo = linhas.shift();
@@ -572,6 +732,7 @@ function montar(d) {
     final.querySelector('.carta').innerHTML = d.final.trim().split(/\n\s*\n/)
       .map(par => `<p>${par.split('\n').map(esc).join('<br>')}</p>`).join('');
     final.hidden = false;
+    if (d.voz) prepararVoz(d.voz);
   }
 
   document.getElementById('conteudo').classList.add('aberto');
