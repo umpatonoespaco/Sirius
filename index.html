@@ -187,6 +187,26 @@
   @keyframes casar { to { transform: scale(1) rotate(-3deg); } }
   #casados.saindo { opacity: 0; transition: opacity .6s; }
   #confete { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 41; pointer-events: none; }
+
+  /* ---------- última parte (dropdown) ---------- */
+  #final { margin: 22px auto 0; max-width: 460px; }
+  #final summary {
+    list-style: none; cursor: pointer; text-align: center; user-select: none;
+    font: 400 11px 'Silkscreen', monospace; color: var(--cinza); padding: 6px 0;
+  }
+  #final summary::-webkit-details-marker { display: none; }
+  #final summary::before { content: '+ '; }
+  #final[open] summary::before { content: '− '; }
+  #final summary:hover { color: var(--preto); }
+  #final .carta {
+    margin-top: 10px; padding: 16px 18px 4px;
+    border: 1px dashed var(--preto); background: #FFFBE0;
+    font: 16px/1.6 'Times New Roman', Times, Georgia, serif; text-align: left;
+    animation: abrirCarta .5s ease;
+  }
+  #final .carta p { margin: 0 0 14px; }
+  #final .carta p:last-child { font-style: italic; text-align: right; }
+  @keyframes abrirCarta { from { opacity: 0; transform: translateY(-6px); } }
 </style>
 </head>
 <body>
@@ -213,6 +233,7 @@
       <div class="poema" id="poema"></div>
       <hr>
       <div style="text-align:center" class="estrelinha">★★★</div>
+      <details id="final" hidden><summary>uma última coisa</summary><div class="carta"></div></details>
       <button id="clover" class="bichinho" type="button" aria-label="Clover" data-nome="CLOVER" data-frase="He contracted a severe case of Death."><img src="assets/clover.png" alt="" draggable="false"></button>
       <button id="creature" class="bichinho" type="button" aria-label="Creature" data-nome="CREATURE" data-frase="It contracted a severe case of Death."><img src="assets/creature.png" alt="" draggable="false"></button>
     </div>
@@ -316,11 +337,17 @@ function desenharEstrelas(id, qtd, tamMin, tamVar, largMin, posX) {
 espalharEstrelas();
 let esperaResize;
 // redesenha quando a página muda de tamanho (janela, fontes carregando, etc.)
-let larguraAntes = 0, alturaAntes = 0;
+let larguraAntes = 0, alturaAntes = 0, ignorarAltura = 0;
+// abrir/fechar a "última coisa" não deve embaralhar as estrelas
+document.getElementById('final').addEventListener('click', e => {
+  if (e.target.closest('summary')) ignorarAltura = performance.now() + 800;
+});
 new ResizeObserver(() => {
   const w = document.body.clientWidth, h = document.getElementById('conteudo').offsetHeight;
   if (w === larguraAntes && h === alturaAntes) return;
+  const soAltura = w === larguraAntes;
   larguraAntes = w; alturaAntes = h;
+  if (soAltura && performance.now() < ignorarAltura) return;
   clearTimeout(esperaResize); esperaResize = setTimeout(espalharEstrelas, 150);
 }).observe(document.body);
 
@@ -540,6 +567,12 @@ function montar(d) {
     `<h2>${esc(titulo)}</h2><div class="para">para minha estrela</div>` +
     estrofes.map(e => `<p${!e.includes('\n') && e.length < 40 ? ' class="solo"' : ''}>${e.split('\n').map(esc).join('<br>')}</p>`).join('');
   esconderNuggets();
+  if (d.final) {
+    const final = document.getElementById('final');
+    final.querySelector('.carta').innerHTML = d.final.trim().split(/\n\s*\n/)
+      .map(par => `<p>${par.split('\n').map(esc).join('<br>')}</p>`).join('');
+    final.hidden = false;
+  }
 
   document.getElementById('conteudo').classList.add('aberto');
   window.scrollTo(0, 0);
